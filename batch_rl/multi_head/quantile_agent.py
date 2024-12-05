@@ -161,6 +161,9 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
     Returns:
       train_op: An op performing one step of training.
     """
+
+    if self.eval_mode: return None
+
     target_distribution = tf.stop_gradient(self._build_target_distribution())
 
     # size of indices: batch_size x 1.

@@ -28,6 +28,9 @@ from dopamine.discrete_domains import run_experiment
 import gin
 import tensorflow.compat.v1 as tf
 
+import os
+import os.path as osp
+import shutil
 
 @gin.configurable
 class FixedReplayRunner(run_experiment.Runner):
@@ -36,6 +39,9 @@ class FixedReplayRunner(run_experiment.Runner):
   def _initialize_checkpointer_and_maybe_resume(self, checkpoint_file_prefix):
     super(FixedReplayRunner, self)._initialize_checkpointer_and_maybe_resume(
         checkpoint_file_prefix)
+
+    self._num_buffers = min(len(os.listdir(self._agent._replay_data_dir)) // 6, 5)
+    print(f'num_buffers = {self._num_buffers}')
 
     # Code for the loading a checkpoint at initialization
     init_checkpoint_dir = self._agent._init_checkpoint_dir  # pylint: disable=protected-access
@@ -64,6 +70,8 @@ class FixedReplayRunner(run_experiment.Runner):
     """Run training phase."""
     self._agent.eval_mode = False
     start_time = time.time()
+    from tqdm import tqdm
+    # for _ in tqdm(range(self._training_steps)):
     for _ in range(self._training_steps):
       self._agent._train_step()  # pylint: disable=protected-access
     time_delta = time.time() - start_time
@@ -77,7 +85,7 @@ class FixedReplayRunner(run_experiment.Runner):
     # pylint: disable=protected-access
     if not self._agent._replay_suffix:
       # Reload the replay buffer
-      self._agent._replay.memory.reload_buffer(num_buffers=5)
+      self._agent._replay.memory.reload_buffer(num_buffers=self._num_buffers)
     # pylint: enable=protected-access
     self._run_train_phase()
 
@@ -105,3 +113,27 @@ class FixedReplayRunner(run_experiment.Runner):
     ])
     self._summary_writer.add_summary(summary, iteration)
 
+  def _checkpoint_experiment(self, iteration):
+    """Checkpoint experiment data.
+
+    Args:
+      iteration: int, iteration number for checkpointing.
+    """
+    experiment_data = self._agent.bundle_and_checkpoint(self._checkpoint_dir,
+                                                        iteration)
+    if experiment_data:
+      experiment_data['current_iteration'] = iteration
+      experiment_data['logs'] = self._logger.data
+      self._checkpointer.save_checkpoint(iteration, experiment_data)
+
+    if (iteration + 1) % 10 == 0:
+      shutil.copyfile(osp.join(self._checkpoint_dir, f'ckpt.{iteration}'), 
+                      osp.join(self._checkpoint_dir, f'stored_ckpt.{iteration}'))
+      shutil.copyfile(osp.join(self._checkpoint_dir, f'sentinel_checkpoint_complete.{iteration}'), 
+                      osp.join(self._checkpoint_dir, f'stored_sentinel_checkpoint_complete.{iteration}'))
+      shutil.copyfile(osp.join(self._checkpoint_dir, f'tf_ckpt-{iteration}.data-00000-of-00001'), 
+                      osp.join(self._checkpoint_dir, f'stored_tf_ckpt-{iteration}.data-00000-of-00001'))
+      shutil.copyfile(osp.join(self._checkpoint_dir, f'tf_ckpt-{iteration}.index'), 
+                      osp.join(self._checkpoint_dir, f'stored_tf_ckpt-{iteration}.index'))
+      shutil.copyfile(osp.join(self._checkpoint_dir, f'tf_ckpt-{iteration}.meta'), 
+                      osp.join(self._checkpoint_dir, f'stored_tf_ckpt-{iteration}.meta'))

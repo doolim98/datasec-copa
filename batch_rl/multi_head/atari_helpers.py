@@ -17,8 +17,6 @@
 """Helper functions for multi head/network (Ensemble-DQN and REM) agents."""
 
 import collections
-import typing
-
 import numpy as np
 import tensorflow.compat.v1 as tf
 
@@ -126,8 +124,8 @@ class MultiHeadQNetwork(tf.keras.Model):
   def __init__(self,
                num_actions: int,
                num_heads: int,
-               transform_strategy: typing.Optional[str] = None,
-               name: typing.Optional[str] = None,
+               transform_strategy: str = None,
+               name: str = None,
                **kwargs):
     """Creates the layers used calculating return distributions.
 
@@ -256,7 +254,7 @@ class NatureDQNNetwork(tf.keras.Model):
     dense2: Final fully-connected layer with `num_actions` units.
   """
 
-  def __init__(self, num_actions: int, name: typing.Optional[str] = None):
+  def __init__(self, num_actions: int, name: str = None):
     """Creates the layers used for calculating Q-values.
 
     Args:
@@ -330,8 +328,8 @@ class MulitNetworkQNetwork(tf.keras.Model):
   def __init__(self,
                num_actions: int,
                num_networks: int,
-               transform_strategy: typing.Optional[str] = None,
-               name: typing.Optional[str] = None,
+               transform_strategy: str = None,
+               name: str = None,
                **kwargs):
     """Creates the networks used calculating multiple Q-values.
 
